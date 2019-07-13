@@ -35,8 +35,7 @@ class TCPConnection:
         try:
             socket.create_connection((self._address, self._port), timeout=2)
             content = str(current_time) + " TCP connection to " + str(self._address) + " succeeded on port " + \
-                      str(self._port)
-            print(content, failed_connection_attempts)
+                                                                                                        str(self._port)
             if failed_connection_attempts > 0:
                 requests.post(slack_url, data=json.dumps({"text": content}))
                 failed_connection_attempts = 0
@@ -44,10 +43,12 @@ class TCPConnection:
         except (socket.timeout, socket.gaierror):
             failed_connection_attempts += 1
             content = str(current_time) + " TCP connection to " + str(self._address) + " failed on port " + \
-                      str(self._port)
-            print(content, failed_connection_attempts)
+                                                                                                str(self._port) + "\n"
             if failed_connection_attempts >= self._timeout:
                 requests.post(slack_url, data=json.dumps({"text": content}))
+                file_name = str(time.strftime("%Y-%m-%d", time.localtime())) + '_' + str(self._address) + "_TCP.txt"
+                with open(file_name, 'a') as file:
+                    file.write(content)
 
 
 class ICMPConnection:
@@ -76,27 +77,37 @@ class ICMPConnection:
 
         platform_identifier = '-n' if platform.system().lower() == 'windows' else '-c'
         command = ['ping', str(platform_identifier), "1", self._address]
+
         output = subprocess.run(command, stdout=subprocess.PIPE)
+        file_name = str(time.strftime("%Y-%m-%d", time.localtime())) + '_' + str(self._address) + "_ICMP.txt"
 
         if len(ping_results) <= self._sample_size-1:
             ping_results.append(output.returncode)
             packet_loss = (ping_results.count(1)/len(ping_results))*100
-            print(len(ping_results), ping_results)
-            print(packet_loss, notify_packet_loss)
+            increase = "{} Packet loss for {} increased from {:.2f}% to {:.2f}%\n".format(current_time, self._address,
+                                                                                        notify_packet_loss, packet_loss)
+            decrease = "{} Packet loss for {} decreased from {:.2f}% to {:.2f}%\n".format(current_time, self._address,
+                                                                                        notify_packet_loss, packet_loss)
+
             if packet_loss - notify_packet_loss > self._change:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} increased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(increase)
                 notify_packet_loss = packet_loss
             elif notify_packet_loss - packet_loss > self._change:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} decreased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+                requests.post(slack_url, data=json.dumps({"text": decrease}))
+                with open(file_name, 'a') as file:
+                    file.write(decrease)
                 notify_packet_loss = packet_loss
-            elif packet_loss == 100.0:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} increased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+            elif packet_loss == 100.00 and notify_packet_loss != 100.00:
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(increase)
+                notify_packet_loss = packet_loss
+            elif packet_loss == 0.0 and notify_packet_loss != 0.00:
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(decrease)
                 notify_packet_loss = packet_loss
             else:
                 pass
@@ -105,20 +116,30 @@ class ICMPConnection:
             ping_results.append(output.returncode)
             del ping_results[0]
             packet_loss = (ping_results.count(1)/len(ping_results))*100
+            increase = "{} Packet loss for {} increased from {:.2f}% to {:.2f}%\n".format(current_time, self._address,
+                                                                                        notify_packet_loss, packet_loss)
+            decrease = "{} Packet loss for {} decreased from {:.2f}% to {:.2f}%\n".format(current_time, self._address,
+                                                                                        notify_packet_loss, packet_loss)
+
             if packet_loss - notify_packet_loss > self._change:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} increased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(increase)
                 notify_packet_loss = packet_loss
             elif notify_packet_loss - packet_loss > self._change:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} decreased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+                requests.post(slack_url, data=json.dumps({"text": decrease}))
+                with open(file_name, 'a') as file:
+                    file.write(decrease)
                 notify_packet_loss = packet_loss
-            elif packet_loss == 100.0:
-                requests.post(slack_url, data=json.dumps({"text": "{} Packet loss for {} increased from {:.2f}% to "
-                                                                  "{:.2f}%".format(current_time, self._address,
-                                                                                   notify_packet_loss, packet_loss)}))
+            elif packet_loss == 100.00 and notify_packet_loss != 100.00:
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(increase)
+                notify_packet_loss = packet_loss
+            elif packet_loss == 0.00 and notify_packet_loss != 0.00:
+                requests.post(slack_url, data=json.dumps({"text": increase}))
+                with open(file_name, 'a') as file:
+                    file.write(decrease)
                 notify_packet_loss = packet_loss
             else:
                 pass
@@ -138,14 +159,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Test TCP/ICMP connection to a destination")
     parser.add_argument('address', help="IP Address")
-    parser.add_argument('--port', dest='port', type=int, default=0, help="TCP port")
-    parser.add_argument('--timeout', dest='timeout', type=int, default=3, help="Minimum number of consecutive TCP "
-                                                                               "timeouts before sending a notification "
-                                                                               "(Default=3)")
-    parser.add_argument('--change', dest='change', type=int, default=5, help="Percentage change in packet loss for "
-                                                                             "sending notification (Default=5)")
-    parser.add_argument('--ssize', dest='sample_size', type=int, default=300, help="Sample size for calculating packet "
-                                                                                   "loss in seconds (Default=300)")
+    parser.add_argument('-p', '--port', dest='port', type=int, default=0, help="TCP port")
+    parser.add_argument('-t', '--timeout', dest='timeout', type=int, default=3, help="Minimum number of consecutive "
+                        "TCP timeouts before sending a notification (Default=3)")
+    parser.add_argument('-c', '--change', dest='change', type=int, default=5, help="Percentage change in packet loss "
+                        "for sending notification (Default=5)")
+    parser.add_argument('-s', '--size', dest='max_sample_size', type=int, default=300, help=" Maximum Sample size for "
+                        "calculating packet loss (in seconds) (Default=300)")
     args = parser.parse_args()
 
     while True:
