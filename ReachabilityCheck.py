@@ -155,12 +155,12 @@ if __name__ == "__main__":
     packet_loss = float(0)
     notify_packet_loss = float(0)
 
-    slack_url = "https://hooks.slack.com/services/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"
+    slack_url = "Replace just the text with your Slack Webhook URL (URL must be in double-quotes)"
 
     parser = argparse.ArgumentParser(description="Test TCP/ICMP connection to a destination")
     parser.add_argument('address', help="IP Address")
     parser.add_argument('-p', '--port', dest='port', type=int, default=0, help="TCP port")
-    parser.add_argument('-t', '--timeout', dest='timeout', type=int, default=3, help="Minimum number of consecutive "
+    parser.add_argument('-ct', '--ctimeout', dest='ctimeout', type=int, default=3, help="Minimum number of consecutive "
                         "TCP timeouts before sending a notification (Default=3)")
     parser.add_argument('-c', '--change', dest='change', type=int, default=5, help="Percentage change in packet loss "
                         "for sending notification (Default=5)")
@@ -172,6 +172,6 @@ if __name__ == "__main__":
         current_time = time.strftime("%a, %Y-%m-%d %H:%M:%S", time.localtime())
         time.sleep(1)
         if args.port > 0:
-            TCPConnection(args.address, args.port, args.timeout).tcp_connection()
+            TCPConnection(args.address, args.port, args.ctimeout).tcp_connection()
         else:
-            ICMPConnection(args.address, args.change, args.sample_size).icmp_connection()
+            ICMPConnection(args.address, args.change, args.max_sample_size).icmp_connection()
