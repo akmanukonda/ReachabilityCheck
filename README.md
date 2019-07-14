@@ -35,7 +35,7 @@ This method tries to connect to a TCP port on a server. By default, it tries eve
 **Simple Usage:** &nbsp;&nbsp;&nbsp;&nbsp;` python3 ReachabilityCheck.py <URL> --port [PORT] `    
 **Options:**  
 ```
-    [-ct][--ctimeout]   Maximum consecutive timeouts allowed
+    [-t][--ctimeout]   Maximum consecutive timeouts allowed
 ```  
 
 Finally, you can always do ` python3 ReachabilityCheck.py --help ` to check usage and all available options
