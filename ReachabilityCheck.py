@@ -160,7 +160,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test TCP/ICMP connection to a destination")
     parser.add_argument('address', help="IP Address")
     parser.add_argument('-p', '--port', dest='port', type=int, default=0, help="TCP port")
-    parser.add_argument('-ct', '--ctimeout', dest='ctimeout', type=int, default=3, help="Minimum number of consecutive "
+    parser.add_argument('-t', '--ctimeout', dest='ctimeout', type=int, default=3, help="Minimum number of consecutive "
                         "TCP timeouts before sending a notification (Default=3)")
     parser.add_argument('-c', '--change', dest='change', type=int, default=5, help="Percentage change in packet loss "
                         "for sending notification (Default=5)")
