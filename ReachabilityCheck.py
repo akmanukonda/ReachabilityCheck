@@ -38,17 +38,20 @@ class TCPConnection:
                                                                                                         str(self._port)
             if failed_connection_attempts > 0:
                 requests.post(slack_url, data=json.dumps({"text": content}))
+                file_name = str(time.strftime("%Y-%m-%d", time.localtime())) + '_' + str(self._address) + "_TCP.txt"
+                with open(file_name, 'a') as file:
+                    file.write(content)
                 failed_connection_attempts = 0
 
         except (socket.timeout, socket.gaierror):
             failed_connection_attempts += 1
-            content = str(current_time) + " TCP connection to " + str(self._address) + " failed on port " + \
+            content = str(current_time) + " TCP connection to " + str(self._address) + " is failing on port " + \
                                                                                                 str(self._port) + "\n"
-            if failed_connection_attempts >= self._timeout:
+            if failed_connection_attempts == self._timeout:
                 requests.post(slack_url, data=json.dumps({"text": content}))
-                file_name = str(time.strftime("%Y-%m-%d", time.localtime())) + '_' + str(self._address) + "_TCP.txt"
-                with open(file_name, 'a') as file:
-                    file.write(content)
+            file_name = str(time.strftime("%Y-%m-%d", time.localtime())) + '_' + str(self._address) + "_TCP.txt"
+            with open(file_name, 'a') as file:
+                file.write(content)
 
 
 class ICMPConnection:
@@ -105,7 +108,7 @@ class ICMPConnection:
                     file.write(increase)
                 notify_packet_loss = packet_loss
             elif packet_loss == 0.0 and notify_packet_loss != 0.00:
-                requests.post(slack_url, data=json.dumps({"text": increase}))
+                requests.post(slack_url, data=json.dumps({"text": decrease}))
                 with open(file_name, 'a') as file:
                     file.write(decrease)
                 notify_packet_loss = packet_loss
@@ -137,7 +140,7 @@ class ICMPConnection:
                     file.write(increase)
                 notify_packet_loss = packet_loss
             elif packet_loss == 0.00 and notify_packet_loss != 0.00:
-                requests.post(slack_url, data=json.dumps({"text": increase}))
+                requests.post(slack_url, data=json.dumps({"text": decrease}))
                 with open(file_name, 'a') as file:
                     file.write(decrease)
                 notify_packet_loss = packet_loss
@@ -155,8 +158,6 @@ if __name__ == "__main__":
     packet_loss = float(0)
     notify_packet_loss = float(0)
 
-    slack_url = "Replace just the text with your Slack Webhook URL (URL must be in double-quotes)"
-
     parser = argparse.ArgumentParser(description="Test TCP/ICMP connection to a destination")
     parser.add_argument('address', help="IP Address")
     parser.add_argument('-p', '--port', dest='port', type=int, default=0, help="TCP port")
@@ -168,10 +169,18 @@ if __name__ == "__main__":
                         "calculating packet loss (in seconds) (Default=300)")
     args = parser.parse_args()
 
-    while True:
-        current_time = time.strftime("%a, %Y-%m-%d %H:%M:%S", time.localtime())
-        time.sleep(1)
-        if args.port > 0:
-            TCPConnection(args.address, args.port, args.ctimeout).tcp_connection()
-        else:
-            ICMPConnection(args.address, args.change, args.max_sample_size).icmp_connection()
+    slack_url = "Replace just this text with your Slack Webhook URL (URL must be within quotation marks)"
+
+    status_code = requests.post(slack_url, data=json.dumps({"text": "URL Validity Check Successful. Monitoring....."}))\
+                                                                                                            .status_code
+
+    if "hooks.slack.com" in slack_url and status_code == 200:
+        while True:
+            current_time = time.strftime("%a, %Y-%m-%d %H:%M:%S", time.localtime())
+            time.sleep(1)
+            if args.port > 0:
+                TCPConnection(args.address, args.port, args.ctimeout).tcp_connection()
+            else:
+                ICMPConnection(args.address, args.change, args.max_sample_size).icmp_connection()
+    else:
+        print("Invalid URL. Please check your Slack Incoming Webhook URL and try again")
